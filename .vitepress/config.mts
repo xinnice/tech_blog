@@ -140,11 +140,17 @@ export default defineConfig({
       },
       {
         text: "移动端",
-        link: "/docs/移动端/移动端.md",
-      },
-      {
-        text: "小程序",
-        link: "/docs/小程序/小程序.md",
+        collapsed: false,
+        items: [
+          {
+            text: "基础",
+            link: "/docs/移动端/基础核心概念.md",
+          },
+          {
+            text: "小程序",
+            link: "/docs/移动端/小程序.md",
+          },
+        ],
       },
       {
         text: "代码管理",
