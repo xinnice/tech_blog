@@ -13,6 +13,13 @@ const isLoading = ref(false);
 const selectedModel = ref("deepseek-chat");
 const showModelSelector = ref(false);
 const controller = ref(null);
+const hasReceivedData = ref(false);
+const isMobile = ref(false);
+
+// 检测是否为移动端
+const checkIsMobile = () => {
+  isMobile.value = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+};
 
 const models = [
   { id: "deepseek-chat", name: "联网搜索", icon: "💬" },
@@ -29,7 +36,13 @@ marked.setOptions({
 });
 
 onMounted(() => {
+  checkIsMobile();
   document.body.style.overflow = "hidden";
+  
+  // 移动端适配：监听键盘弹出/收起
+  if (isMobile.value) {
+    window.addEventListener('resize', handleResize);
+  }
 });
 
 onUnmounted(() => {
@@ -37,7 +50,20 @@ onUnmounted(() => {
   if (controller.value) {
     controller.value.abort();
   }
+  
+  // 清理事件监听器
+  if (isMobile.value) {
+    window.removeEventListener('resize', handleResize);
+  }
 });
+
+// 处理移动端键盘弹出/收起
+const handleResize = () => {
+  // 延迟执行以确保窗口尺寸已经更新
+  setTimeout(() => {
+    scrollToBottom();
+  }, 100);
+};
 
 async function sendMessage() {
   if (!inputMessage.value.trim() || isLoading.value) return;
@@ -52,14 +78,9 @@ async function sendMessage() {
   inputMessage.value = "";
   isLoading.value = true;
   showModelSelector.value = false;
+  hasReceivedData.value = false;
 
   try {
-    // 添加助手消息占位符
-    messages.value.push({
-      role: "assistant",
-      content: "",
-    });
-
     // 创建AbortController用于取消请求
     controller.value = new AbortController();
 
@@ -94,27 +115,47 @@ async function sendMessage() {
         const chunk = decoder.decode(value, { stream: true });
         accumulatedContent += chunk;
 
-        // 更新最后一条消息（助手消息）
-        const lastMessage = messages.value[messages.value.length - 1];
-        if (lastMessage.role === "assistant") {
-          lastMessage.content = accumulatedContent;
-          await nextTick();
-          scrollToBottom();
+        // 标记已接收到数据
+        if (!hasReceivedData.value) {
+          hasReceivedData.value = true;
+          // 添加助手消息占位符
+          messages.value.push({
+            role: "assistant",
+            content: accumulatedContent,
+          });
+        } else {
+          // 更新最后一条消息（助手消息）
+          const lastMessage = messages.value[messages.value.length - 1];
+          if (lastMessage.role === "assistant") {
+            lastMessage.content = accumulatedContent;
+          }
         }
+        
+        await nextTick();
+        scrollToBottom();
       }
     }
   } catch (error) {
     if (error.name !== "AbortError") {
       console.error("Error:", error);
-      // 更新最后一条消息为错误信息
-      const lastMessage = messages.value[messages.value.length - 1];
-      if (lastMessage.role === "assistant") {
-        lastMessage.content = "抱歉，发生了一些错误，请稍后再试。";
+      // 如果还没有接收过数据，则添加错误消息
+      if (!hasReceivedData.value) {
+        messages.value.push({
+          role: "assistant",
+          content: "抱歉，发生了一些错误，请稍后再试。",
+        });
+      } else {
+        // 更新最后一条消息为错误信息
+        const lastMessage = messages.value[messages.value.length - 1];
+        if (lastMessage.role === "assistant") {
+          lastMessage.content = "抱歉，发生了一些错误，请稍后再试。";
+        }
       }
     }
   } finally {
     isLoading.value = false;
     controller.value = null;
+    hasReceivedData.value = false;
     scrollToBottom();
   }
 }
@@ -147,6 +188,7 @@ function cancelRequest() {
   if (controller.value) {
     controller.value.abort();
     isLoading.value = false;
+    hasReceivedData.value = false;
   }
 }
 
@@ -156,6 +198,13 @@ useEventListener("click", (e) => {
     showModelSelector.value = false;
   }
 });
+
+// 文本域自动调整高度
+const adjustTextareaHeight = (event) => {
+  const textarea = event.target;
+  textarea.style.height = "auto";
+  textarea.style.height = Math.min(textarea.scrollHeight, 120) + "px";
+};
 </script>
 
 <template>
@@ -172,10 +221,21 @@ useEventListener("click", (e) => {
             v-html="renderMarkdown(msg.content || '')"
           ></div>
         </div>
+        
+        <!-- 加载效果 -->
+        <div v-if="isLoading && !hasReceivedData" class="message assistant">
+          <div class="message-content">
+            <div class="loading-dots">
+              <span></span>
+              <span></span>
+              <span></span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
-    <div class="input-area">
+    <div class="input-area" :class="{ 'mobile-input-area': isMobile }">
       <div class="input-container">
         <div
           class="model-selector"
@@ -184,7 +244,7 @@ useEventListener("click", (e) => {
           <span class="model-icon">{{
             models.find((m) => m.id === selectedModel)?.icon
           }}</span>
-          {{ models.find((m) => m.id === selectedModel)?.name }}
+          <span class="model-name">{{ models.find((m) => m.id === selectedModel)?.name }}</span>
           <span class="dropdown-icon">▼</span>
 
           <div v-if="showModelSelector" class="model-dropdown">
@@ -204,6 +264,8 @@ useEventListener("click", (e) => {
           placeholder="给 DeepSeek 发送消息"
           rows="1"
           ref="textarea"
+          @input="adjustTextareaHeight"
+          class="message-input"
         ></textarea>
         <div class="button-group">
           <button v-if="isLoading" @click="cancelRequest" class="cancel-button">
@@ -241,6 +303,7 @@ useEventListener("click", (e) => {
   overflow-y: auto;
   padding: 0;
   margin: 0;
+  -webkit-overflow-scrolling: touch; /* iOS滚动优化 */
 }
 
 .messages {
@@ -275,23 +338,21 @@ useEventListener("click", (e) => {
   gap: 8px;
 }
 
-
 .sender-name {
   font-weight: 500;
   color: #202124;
   font-size: 14px;
 }
 
-
 .message-content {
   padding: 16px;
   border-radius: 12px;
-  background: #f5f5f5;
   color: #202124;
   line-height: 1.6;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
   max-width: 80%;
   width: 100%;
+  word-wrap: break-word;
+  word-break: break-word;
 }
 
 .user .message-content {
@@ -320,24 +381,29 @@ useEventListener("click", (e) => {
   margin: 8px 0;
 }
 
-.typing-indicator {
+/* 加载动画样式 */
+.loading-dots {
   display: flex;
-  gap: 6px;
-  padding: 8px 0;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 0;
 }
 
-.typing-indicator span {
+.loading-dots span {
+  display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #1a73e8;
+  background-color: #1a73e8;
+  margin: 0 4px;
   animation: bounce 1.4s infinite ease-in-out;
 }
 
-.typing-indicator span:nth-child(1) {
+.loading-dots span:nth-child(1) {
   animation-delay: -0.32s;
 }
-.typing-indicator span:nth-child(2) {
+
+.loading-dots span:nth-child(2) {
   animation-delay: -0.16s;
 }
 
@@ -361,6 +427,17 @@ useEventListener("click", (e) => {
   z-index: 10;
 }
 
+/* 移动端输入区域样式 */
+.mobile-input-area {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  padding: 12px;
+  background: white;
+  border-top: 1px solid #e0e0e0;
+}
+
 .input-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -370,7 +447,7 @@ useEventListener("click", (e) => {
   border: 1px solid #e0e0e0;
   border-radius: 24px;
   padding: 8px 16px;
-  align-items: center;
+  align-items: flex-end;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -388,6 +465,18 @@ useEventListener("click", (e) => {
   transition: background-color 0.2s;
   user-select: none;
   min-width: 120px;
+  flex-shrink: 0;
+}
+
+.model-name {
+  display: none;
+}
+
+/* 在较宽屏幕上显示完整模型名称 */
+@media (min-width: 768px) {
+  .model-name {
+    display: inline;
+  }
 }
 
 .model-selector:hover {
@@ -443,9 +532,9 @@ useEventListener("click", (e) => {
   font-size: 16px;
 }
 
-textarea {
+.message-input {
   flex: 1;
-  padding: 8px;
+  padding: 8px 0;
   border: none;
   background: transparent;
   resize: none;
@@ -454,17 +543,16 @@ textarea {
   color: #202124;
   line-height: 1.5;
   min-height: 24px;
-  max-height: 200px;
-}
-
-textarea:focus {
+  max-height: 120px;
   outline: none;
+  width: 100%;
 }
 
 .button-group {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-shrink: 0;
 }
 
 button {
@@ -489,6 +577,7 @@ button {
   background: #f8f9fa;
   color: #5f6368;
   font-size: 14px;
+  height: 40px;
 }
 
 button:hover:not(:disabled) {
@@ -509,5 +598,79 @@ button:disabled {
   height: 24px;
 }
 
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .chat-page {
+    height: 100vh;
+    margin: 0;
+  }
+  
+  .messages {
+    padding: 16px;
+    gap: 16px;
+  }
+  
+  .message {
+    padding: 0 16px;
+  }
+  
+  .message-content {
+    padding: 12px 16px;
+    max-width: 90%;
+    font-size: 16px; /* 防止iOS缩放 */
+  }
+  
+  .input-area {
+    padding: 12px;
+  }
+  
+  .mobile-input-area {
+    padding: 8px 12px;
+  }
+  
+  .input-container {
+    padding: 6px 12px;
+    gap: 8px;
+  }
+  
+  .model-selector {
+    padding: 4px 8px;
+    min-width: auto;
+    font-size: 12px;
+  }
+  
+  .model-icon {
+    font-size: 14px;
+  }
+  
+  .message-input {
+    font-size: 16px; /* 防止iOS自动放大 */
+    padding: 4px 0;
+  }
+  
+  button, .cancel-button {
+    width: 36px;
+    height: 36px;
+  }
+  
+  .cancel-button {
+    padding: 0 12px;
+    font-size: 12px;
+  }
+}
 
+/* 小屏幕进一步优化 */
+@media (max-width: 480px) {
+  .model-selector .model-name {
+    display: none;
+  }
+  
+  .model-selector {
+    padding: 4px 6px;
+  }
+  
+  .message-content {
+    max-width: 85%;
+  }
+}
 </style>
