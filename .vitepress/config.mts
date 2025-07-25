@@ -1,10 +1,29 @@
 import { defineConfig } from "vitepress";
+import { fileURLToPath, URL } from "node:url";
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: "前端技术知识",
   description: "前端技术知识",
-  head: [['link', { rel: 'icon', href: '/favicon.ico' }]],
+  head: [["link", { rel: "icon", href: "/favicon.ico" }]],
+
+  // 添加Vite配置
+  vite: {
+    server: {
+      proxy: {
+        "/api": {
+          target: "http://localhost:3000",
+          changeOrigin: true,
+        },
+      },
+    },
+    resolve: {
+      alias: {
+        "@": fileURLToPath(new URL("./", import.meta.url)),
+      },
+    },
+  },
+
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     logo: "/logo.svg",
@@ -18,6 +37,7 @@ export default defineConfig({
     nav: [
       // { text: "Home", link: "/markdown-examples" },
       { text: "文档", link: "/docs/JavaScript/ES6.md" },
+      { text: "AI助手", link: "/docs/ai.md" },
     ],
     outline: {
       label: "导航",
@@ -169,8 +189,7 @@ export default defineConfig({
       },
     ],
 
-    socialLinks: [
-      { icon: "github", link: "https://github.com/vuejs/vitepress" },
-    ],
+    // 移除GitHub链接
+    socialLinks: [],
   },
 });

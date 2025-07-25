@@ -10,9 +10,12 @@ hero:
     # - theme: brand
     #   text: Markdown Examples
     #   link: /markdown-examples
-    - theme: brand
+    - theme: alt
       text: 进入文档
       link: /docs/CSS/水平垂直居中.md
+    - theme: brand
+      text: AI问答
+      link: /docs/ai.md 
 
 features:
   - title: CSS
