@@ -132,16 +132,20 @@ export default defineConfig({
         ],
       },
       {
-        text: "node",
+        text: "Nodejs",
         collapsed: false,
         items: [
           {
-            text: "MongoDB原生CRUD命令总结",
-            link: "/docs/Nodejs/MongoDB原生CRUD命令总结.md",
+            text: "介绍及基本使用",
+            link: "/docs/Nodejs/介绍及基本使用.md",
           },
           {
-            text: "mongoose的CRUD方法总结",
-            link: "/docs/Nodejs/mongoose的CRUD方法总结.md",
+            text: "框架",
+            link: "/docs/Nodejs/框架.md",
+          },
+          {
+            text: "数据库通信",
+            link: "/docs/Nodejs/数据库通信.md",
           },
         ],
       },
@@ -150,12 +154,16 @@ export default defineConfig({
         collapsed: false,
         items: [
           {
-            text: "Gulp",
-            link: "/docs/工程化/Gulp.md",
+            text: "Vite",
+            link: "/docs/工程化/Vite.md",
           },
           {
             text: "Webpack",
             link: "/docs/工程化/Webpack.md",
+          },
+          {
+            text: "Gulp",
+            link: "/docs/工程化/Gulp.md",
           },
         ],
       },
@@ -184,6 +192,20 @@ export default defineConfig({
           {
             text: "github",
             link: "/docs/代码管理/github.md",
+          },
+        ],
+      },
+      {
+        text: "部署",
+        collapsed: false,
+        items: [
+          {
+            text: "nginx基本介绍",
+            link: "/docs/部署/nginx基本介绍.md",
+          },
+          {
+            text: "nginx配置",
+            link: "/docs/部署/nginx配置.md",
           },
         ],
       },

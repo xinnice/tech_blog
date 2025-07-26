@@ -30,18 +30,20 @@ features:
   - title: Vue、React
     details: 使用脚手架创建项目、路由、组件化
     link: /docs/Vue/搭建环境.md
-  - title: node
-    details: mongodb数据库操作
-    link: /docs/Nodejs/MongoDB原生CRUD命令总结.md
+  - title: Nodejs
+    details: js也能写服务端，基本使用及框架介绍
+    link: /docs/Nodejs/介绍及基本使用.md
   - title: 工程化
-    details: Webpack、Gulp
-    link: /docs/工程化/Webpack.md
+    details: Vite、Webpack、Gulp
+    link: /docs/工程化/Vite.md
   - title: 移动端
     details: 基础概念、小程序
     link: /docs/移动端/基础核心概念.md
   - title: 代码协作
     details: git、github代码管理
     link: "/docs/代码管理/git.md"
-
+  - title: 部署
+    details: nginx代理服务器
+    link: "/docs/部署/nginx基本介绍.md"
 
 
